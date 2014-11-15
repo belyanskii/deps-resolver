@@ -1,3 +1,22 @@
+var ___bemDecl = [
+    {
+        "name": "a1"
+    }
+];
+
+var ___bemDeps = [
+    {
+        "block": "a3"
+    },
+    {
+        "block": "a2"
+    },
+    {
+        "block": "a1"
+    }
+];
+
+
 /**
  * DepsResolver
  * ============
