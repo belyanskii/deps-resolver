@@ -3,11 +3,7 @@
  * ============
  */
 
-var inherit = require('inherit'),
-    vm = require('vm'),
-    vow = require('vow'),
-    vfs = require('enb/lib/fs/async-fs'),
-    yaml = require('js-yaml');
+var inherit = require('inherit');
 
 function DepsError(message) {
     this.message = message;

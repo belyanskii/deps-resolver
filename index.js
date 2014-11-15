@@ -1,5 +1,4 @@
 var through = require('through2');
-var after = require('after-event');
 var Resolver = require('./deps-resolver.js');
 
 module.exports = function () {
@@ -13,15 +12,22 @@ module.exports = function () {
     });
 
     var resolver = new Resolver();
+    var done = false;
 
-    after(output, 'end', function () {});
+    output.on('end', function () {
+        done = true;
+    });
 
     output.resolve = function (decls) {
         var result = through.obj();
 
-        after(output, 'end', function () {
-
-        });
+        if (!done) {
+            output.on('end', function () {
+                // call resolver
+            });
+        } else {
+            // call resolver
+        }
 
         return result;
     };

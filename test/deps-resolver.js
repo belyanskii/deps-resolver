@@ -7,7 +7,7 @@ var assert = require('stream-assert');
 it('should resolve', function (done) {
     var deps = walker(['blocks'])
         .pipe(techDeps())
-        .pipe(depsResolve);
+        .pipe(depsResolve());
 
     deps
         .resolve([{
