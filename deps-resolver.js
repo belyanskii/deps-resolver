@@ -9,10 +9,20 @@ var ___bemDeps = [
         "block": "a3"
     },
     {
-        "block": "a2"
+        "block": "a2",
+        "require": [
+            {
+                block: 'a2'
+            }
+        ]
     },
     {
-        "block": "a1"
+        "block": "a1",
+        "require": [
+            {
+                block: 'a2'
+            }
+        ]
     }
 ];
 
@@ -413,6 +423,7 @@ module.exports = inherit({
             result = [],
             hasChanges = true,
             newItems;
+
         while (hasChanges) {
             newItems = [];
             hasChanges = false;
