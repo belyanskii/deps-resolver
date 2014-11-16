@@ -23,8 +23,9 @@ module.exports = inherit({
      * Конструктор.
      * @param {Level[]} deps
      */
-    __constructor: function (deps) {
+    __constructor: function (deps, levels) {
         this.deps = deps;
+        this.levels = levels || [];
         this.declarations = [];
         this.resolved = {};
         this.declarationIndex = {};
@@ -39,6 +40,7 @@ module.exports = inherit({
         var _this = this,
             mustDecls,
             files;
+
         if (decl.elem) {
             //files = this.levels.getElemFiles(decl.name, decl.elem, decl.modName, decl.modVal);
             files = this.deps.filter(function(dep) {
@@ -94,7 +96,7 @@ module.exports = inherit({
                         if (!mustDepIndex[key]) {
                             mustDepIndex[key] = true;
                             nd.key = key;
-                            //nd.level = dep.level;
+                            nd.level = dep.level;
                             mustDeps.push(nd);
                         }
                     });
@@ -105,6 +107,7 @@ module.exports = inherit({
                         if (!shouldDepIndex[key]) {
                             shouldDepIndex[key] = true;
                             nd.key = key;
+                            nd.level = dep.level;
                             shouldDeps.push(nd);
                         }
                     });
@@ -134,9 +137,9 @@ module.exports = inherit({
         var result = { mustDeps: mustDeps, shouldDeps: shouldDeps };
 
         if (files.length > 0) {
-            return keepWorking(files.shift()).then(function () {
-                return result;
-            });
+            keepWorking(files.shift());
+
+            return vow.fulfill(result);
         } else {
             return vow.fulfill(result);
         }
@@ -237,6 +240,7 @@ module.exports = inherit({
             });
             throw Error('Unresolved deps: \n' + errorMessage.join('\n'));
         }
+
         return result;
     }
 });

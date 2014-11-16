@@ -2,7 +2,7 @@ var through = require('through2');
 var Resolver = require('./deps-resolver.js');
 var bemObject = require('bem-object');
 
-module.exports = function () {
+module.exports = function (levels) {
 
     //var Datastore = require('nedb'),
     //    db = new Datastore();
@@ -22,9 +22,10 @@ module.exports = function () {
         done = true;
     });
 
-    output.resolve = function (decls) {
+    var result = through.obj();
+
+    function callResolver(decls) {
         var resolver = new Resolver(buffer);
-        var result = through.obj();
 
         var nameDecls = decls.map(function(dec) {
             dec.name = dec.block;
@@ -40,20 +41,31 @@ module.exports = function () {
             };
         })).then(function() {
             var resolved = resolver.resolve();
-            if (!done) {
-                output.on('finish', function () {
-                    resolved.forEach(function (obj) {
+            resolved.forEach(function (obj) {
+
+                if (levels) {
+                    levels.forEach(function (level) {
+                        obj.level = level;
                         result.write(obj);
                     });
-                    result.end();
-                });
-            } else {
-                resolved.forEach(function (obj) {
+                } else {
                     result.write(obj);
-                });
-                result.end();
-            }
+                }
+
+            });
+            result.end();
+        }).catch(function (err) {
+            result.emit('error', err);
+            result.end();
         });
+    }
+
+    output.resolve = function (decls) {
+        if (!done) {
+            output.on('finish', callResolver.bind(null, decls));
+        } else {
+            callResolver(decls);
+        }
 
         return result;
     };

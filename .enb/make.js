@@ -30,6 +30,7 @@ module.exports = function(config) {
 
         function getLevels() {
             return [
+                {"path":"common","check":true},
                 {"path":"blocks","check":true}
             ].map(function(l) { return config.resolvePath(l); });
         }
