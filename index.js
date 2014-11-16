@@ -27,14 +27,14 @@ module.exports = function (levels) {
     function callResolver(decls) {
         var resolver = new Resolver(buffer);
 
-        var nameDecls = decls.map(function(dec) {
-            dec.name = dec.block;
-            return dec;
-        });
+        //var nameDecls = decls.map(function(dec) {
+        //    dec.name = dec.block;
+        //    return dec;
+        //});
 
-        resolver.addDecls(nameDecls.map(function(item) {
+        resolver.addDecls(decls.map(function(item) {
             return {
-                name: item.block,
+                block: item.block,
                 elem: item.elem,
                 modName: item.mod,
                 modVal: item.val
@@ -42,7 +42,6 @@ module.exports = function (levels) {
         })).then(function() {
             var resolved = resolver.resolve();
             resolved.forEach(function (obj) {
-
                 if (levels) {
                     levels.forEach(function (level) {
                         obj.level = level;

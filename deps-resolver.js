@@ -44,7 +44,7 @@ module.exports = inherit({
         if (decl.elem) {
             //files = this.levels.getElemFiles(decl.name, decl.elem, decl.modName, decl.modVal);
             files = this.deps.filter(function(dep) {
-                return dep.block === decl.name &&
+                return dep.block === decl.block &&
                     dep.elem === decl.elem &&
                     dep.modName === decl.modName &&
                     dep.modVal === decl.modVal;
@@ -53,7 +53,7 @@ module.exports = inherit({
         } else {
             //files = this.levels.getBlockFiles(decl.name, decl.modName, decl.modVal);
             files = this.deps.filter(function(dep) {
-                return dep.block === decl.name &&
+                return dep.block === decl.block &&
                     dep.modName === decl.modName &&
                     dep.modVal === decl.modVal;
             });
@@ -66,17 +66,17 @@ module.exports = inherit({
         if (decl.modName) {
             if (decl.elem) {
                 mustDecls = [
-                    { name: decl.name, elem: decl.elem }
+                    { block: decl.block, elem: decl.elem }
                 ];
                 if (decl.modVal) {
-                    mustDecls.push({ name: decl.name, elem: decl.elem, modName: decl.modName });
+                    mustDecls.push({ block: decl.block, elem: decl.elem, modName: decl.modName });
                 }
             } else {
                 mustDecls = [
-                    { name: decl.name }
+                    { block: decl.block }
                 ];
                 if (decl.modVal) {
-                    mustDecls.push({ name: decl.name, modName: decl.modName });
+                    mustDecls.push({ block: decl.block, modName: decl.modName });
                 }
             }
             mustDecls.forEach(function (mustDecl) {
@@ -216,7 +216,7 @@ module.exports = inherit({
                         }
                     }
                     var item = {
-                        block: decl.name
+                        block: decl.block
                     };
                     if (decl.elem) {
                         item.elem = decl.elem;
@@ -246,6 +246,6 @@ module.exports = inherit({
 });
 
 function declKey(decl) {
-   return decl.name + (decl.elem ? '__' + decl.elem : '') +
+   return decl.block + (decl.elem ? '__' + decl.elem : '') +
        (decl.modName ? '_' + decl.modName + (decl.modVal ? '_' + decl.modVal : '') : '');
 }
