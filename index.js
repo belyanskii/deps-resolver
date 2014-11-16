@@ -1,33 +1,59 @@
 var through = require('through2');
 var Resolver = require('./deps-resolver.js');
+var bemObject = require('bem-object');
 
 module.exports = function () {
 
-    var Datastore = require('nedb'),
-        db = new Datastore();
+    //var Datastore = require('nedb'),
+    //    db = new Datastore();
+
+    var buffer = [];
 
     var output = through.obj(function (obj, enc, cb) {
-        db.insert(obj);
-        cb(null, obj);
+        // db.insert(obj);
+        // cb(null, obj);
+        buffer.push(obj);
+        cb(null);
     });
 
-    var resolver = new Resolver();
     var done = false;
 
-    output.on('end', function () {
+    output.on('finish', function () {
         done = true;
     });
 
     output.resolve = function (decls) {
+        var resolver = new Resolver(buffer);
         var result = through.obj();
 
-        if (!done) {
-            output.on('end', function () {
-                // call resolver
-            });
-        } else {
-            // call resolver
-        }
+        var nameDecls = decls.map(function(dec) {
+            dec.name = dec.block;
+            return dec;
+        });
+
+        resolver.addDecls(nameDecls.map(function(item) {
+            return {
+                name: item.block,
+                elem: item.elem,
+                modName: item.mod,
+                modVal: item.val
+            };
+        })).then(function() {
+            var resolved = resolver.resolve();
+            if (!done) {
+                output.on('finish', function () {
+                    resolved.forEach(function (obj) {
+                        result.write(obj);
+                    });
+                    result.end();
+                });
+            } else {
+                resolved.forEach(function (obj) {
+                    result.write(obj);
+                });
+                result.end();
+            }
+        });
 
         return result;
     };

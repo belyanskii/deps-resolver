@@ -4,6 +4,7 @@
  */
 
 var inherit = require('inherit');
+var vow = require('vow');
 
 function DepsError(message) {
     this.message = message;
@@ -20,124 +21,13 @@ module.exports = inherit({
 
     /**
      * Конструктор.
-     * @param {Level[]} levels
+     * @param {Level[]} deps
      */
-    __constructor: function (levels) {
-        this.levels = levels;
+    __constructor: function (deps) {
+        this.deps = deps;
         this.declarations = [];
         this.resolved = {};
         this.declarationIndex = {};
-    },
-
-    /**
-     * Раскрывает шорткаты deps'а.
-     * @param {String|Object} dep
-     * @param {String} blockName
-     * @param {String} elemName
-     * @returns {Array}
-     */
-    normalizeDep: function (dep, blockName, elemName) {
-        var levels = this.levels;
-        if (typeof dep === 'string') {
-            return [{ name: dep }];
-        } else {
-            var res = [];
-            if (!dep || !(dep instanceof Object)) {
-                throw new DepsError('Deps shoud be instance of Object or String');
-            }
-            if (dep.elem) {
-                if (dep.mods) {
-                    Object.keys(dep.mods).forEach(function (modName) {
-                        var modVals = dep.mods[modName];
-                        if (!Array.isArray(modVals)) {
-                            modVals = [modVals];
-                        }
-                        res = res.concat(modVals.map(function (modVal) {
-                            return { name: dep.block || blockName, elem: dep.elem, modName: modName, modVal: modVal };
-                        }));
-                    });
-                } else if (dep.mod) {
-                    res.push({ name: dep.block || blockName, elem: dep.elem, modName: dep.mod, modVal: dep.val });
-                } else {
-                    res.push({ name: dep.block || blockName, elem: dep.elem });
-                }
-            } else if (dep.mod || dep.mods || dep.elems) {
-                if (dep.mod) {
-                    res.push({ name: dep.block || blockName, modName: dep.mod, modVal: dep.val });
-                }
-                Object.keys(dep.mods || {}).forEach(function (modName) {
-                    var modVals = dep.mods[modName];
-                    if (modVals === '*') {
-                        modVals = levels.getModValues(dep.block || blockName, modName);
-                    }
-                    if (!Array.isArray(modVals)) {
-                        modVals = [modVals];
-                    }
-                    res = res.concat(modVals.map(function (modVal) {
-                        if (elemName && !dep.block && !dep.elem) {
-                            return { name: dep.block || blockName, elem: elemName, modName: modName, modVal: modVal };
-                        } else {
-                            return { name: dep.block || blockName, modName: modName, modVal: modVal };
-                        }
-                    }));
-                });
-                if (dep.elems) {
-                    res.push({ name: dep.block || blockName });
-                    var elems = dep.elems || [];
-                    if (!Array.isArray(elems)) {
-                        elems = [elems];
-                    }
-                    elems.forEach(function (elem) {
-                        if (typeof elem === 'object') {
-                            res.push({ name: dep.block || blockName, elem: elem.elem });
-                            Object.keys(elem.mods || {}).forEach(function (modName) {
-                                var modVals = elem.mods[modName];
-                                if (!Array.isArray(modVals)) {
-                                    modVals = [modVals];
-                                }
-                                res = res.concat(modVals.map(function (modVal) {
-                                    return {
-                                        name: dep.block || blockName,
-                                        elem: elem.elem,
-                                        modName: modName,
-                                        modVal: modVal
-                                    };
-                                }));
-                            });
-                        } else {
-                            res.push({ name: dep.block || blockName, elem: elem });
-                        }
-                    });
-                }
-            } else {
-                res = [{ name: dep.block || blockName }];
-            }
-            if (dep.required) {
-                res.forEach(function (subDep) {
-                    subDep.required = true;
-                });
-            }
-            return res;
-        }
-    },
-
-    /**
-     * Раскрывает шорткаты для списка deps'ов.
-     * @param {String|Object|Array} deps
-     * @param {String} [blockName]
-     * @param {String} [elemName]
-     * @returns {Array}
-     */
-    normalizeDeps: function (deps, blockName, elemName) {
-        if (Array.isArray(deps)) {
-            var result = [];
-            for (var i = 0, l = deps.length; i < l; i++) {
-                result = result.concat(this.normalizeDep(deps[i], blockName, elemName));
-            }
-            return result;
-        } else {
-            return this.normalizeDep(deps, blockName, elemName);
-        }
     },
 
     /**
@@ -150,13 +40,23 @@ module.exports = inherit({
             mustDecls,
             files;
         if (decl.elem) {
-            files = this.levels.getElemFiles(decl.name, decl.elem, decl.modName, decl.modVal);
+            //files = this.levels.getElemFiles(decl.name, decl.elem, decl.modName, decl.modVal);
+            files = this.deps.filter(function(dep) {
+                return dep.block === decl.name &&
+                    dep.elem === decl.elem &&
+                    dep.modName === decl.modName &&
+                    dep.modVal === decl.modVal;
+            });
+
         } else {
-            files = this.levels.getBlockFiles(decl.name, decl.modName, decl.modVal);
+            //files = this.levels.getBlockFiles(decl.name, decl.modName, decl.modVal);
+            files = this.deps.filter(function(dep) {
+                return dep.block === decl.name &&
+                    dep.modName === decl.modName &&
+                    dep.modVal === decl.modVal;
+            });
         }
-        files = files.filter(function (file) {
-            return file.suffix === 'deps.js' || file.suffix === 'deps.yaml';
-        });
+
         var mustDepIndex = {},
             shouldDepIndex = {};
         mustDepIndex[declKey(decl)] = true;
@@ -185,85 +85,37 @@ module.exports = inherit({
         }
         var shouldDeps = [];
 
-        function keepWorking(file) {
-            return vfs.read(file.fullname, 'utf8').then(function (depContent) {
-                if (file.suffix === 'deps.js') {
-                    var depData;
-                    try {
-                        depData = vm.runInThisContext(depContent);
-                    } catch (e) {
-                        throw new Error('Syntax error in file "' + file.fullname + '": ' + e.message);
-                    }
-                    depData = Array.isArray(depData) ? depData : [depData];
-                    depData.forEach(function (dep) {
-                        if (!dep.tech) {
-                            if (dep.mustDeps) {
-                                _this.normalizeDeps(dep.mustDeps, decl.name, decl.elem).forEach(function (nd) {
-                                    var key = declKey(nd);
-                                    if (!mustDepIndex[key]) {
-                                        mustDepIndex[key] = true;
-                                        nd.key = key;
-                                        mustDeps.push(nd);
-                                    }
-                                });
-                            }
-                            if (dep.shouldDeps) {
-                                _this.normalizeDeps(dep.shouldDeps, decl.name, decl.elem).forEach(function (nd) {
-                                    var key = declKey(nd);
-                                    if (!shouldDepIndex[key]) {
-                                        shouldDepIndex[key] = true;
-                                        nd.key = key;
-                                        shouldDeps.push(nd);
-                                    }
-                                });
-                            }
-                            if (dep.noDeps) {
-                                _this.normalizeDeps(dep.noDeps, decl.name, decl.elem).forEach(function (nd) {
-                                    var key = declKey(nd);
-                                    nd.key = key;
-                                    removeFromDeps(nd, mustDepIndex, mustDeps);
-                                    removeFromDeps(nd, shouldDepIndex, shouldDeps);
-                                });
-                            }
-                        }
-                    });
-                } else if (file.suffix === 'deps.yaml') {
-                    var depYamlStructure = yaml.safeLoad(depContent, {
-                        filename: file.fullname,
-                        strict: true
-                    });
-                    if (!Array.isArray(depYamlStructure)) {
-                        throw new Error('Invalid yaml deps structure at: ' + file.fullname);
-                    }
-                    _this.normalizeDeps(depYamlStructure, decl.name, decl.elem).forEach(function (nd) {
-                        var key = declKey(nd),
-                            index,
-                            depList;
-                        if (nd.required) {
-                            index = mustDepIndex;
-                            depList = mustDeps;
-                        } else {
-                            index = shouldDepIndex;
-                            depList = shouldDeps;
-                        }
-                        if (!index[key]) {
-                            index[key] = true;
+        function keepWorking(depData) {
+            depData = Array.isArray(depData) ? depData : [depData];
+            depData.forEach(function (dep) {
+                if (dep.require) {
+                    dep.require.forEach(function (nd) {
+                        var key = declKey(nd);
+                        if (!mustDepIndex[key]) {
+                            mustDepIndex[key] = true;
                             nd.key = key;
-                            depList.push(nd);
+                            //nd.level = dep.level;
+                            mustDeps.push(nd);
                         }
                     });
                 }
-                if (files.length > 0) {
-                    return keepWorking(files.shift());
-                } else {
-                    return null;
+                if (dep.expect) {
+                    dep.expect.forEach(function (nd) {
+                        var key = declKey(nd);
+                        if (!shouldDepIndex[key]) {
+                            shouldDepIndex[key] = true;
+                            nd.key = key;
+                            shouldDeps.push(nd);
+                        }
+                    });
                 }
-            }).fail(function (err) {
-                if (err instanceof DepsError) {
-                    err.message += ' in file "' + file.fullname + '"';
-                }
-                throw err;
             });
+
+            if (files.length > 0) {
+                return keepWorking(files.shift());
+            } else {
+                return null;
+            }
         }
 
         function removeFromDeps(decl, index, list) {
@@ -287,51 +139,6 @@ module.exports = inherit({
             });
         } else {
             return vow.fulfill(result);
-        }
-    },
-
-    /**
-     * Добавляет декларацию блока в резолвер.
-     * @param {String} blockName
-     * @param {String} modName
-     * @param {String} modVal
-     * @returns {Promise}
-     */
-    addBlock: function (blockName, modName, modVal) {
-        if (modName) {
-            this.addDecl({
-                name: blockName,
-                modName: modName,
-                modVal: modVal
-            });
-        } else {
-            this.addDecl({
-                name: blockName
-            });
-        }
-    },
-
-    /**
-     * Добавляет декларацию элемента в резолвер.
-     * @param {String} blockName
-     * @param {String} elemName
-     * @param {String} modName
-     * @param {String} modVal
-     * @returns {Promise}
-     */
-    addElem: function (blockName, elemName, modName, modVal) {
-        if (modName) {
-            return this.addDecl({
-                name: blockName,
-                elem: elemName,
-                modName: modName,
-                modVal: modVal
-            });
-        } else {
-            return this.addDecl({
-                name: blockName,
-                elem: elemName
-            });
         }
     },
 

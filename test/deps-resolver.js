@@ -1,6 +1,6 @@
 var depsResolve = require('../index.js');
 var mock = require('mock-fs');
-var walker = require('bem-walk')
+var walker = require('bem-walk');
 var techDeps = require('tech-deps.js');
 var assert = require('stream-assert');
 
@@ -11,10 +11,9 @@ it('should resolve', function (done) {
 
     deps
         .resolve([{
-            block: 'block'
+            block: 'a1'
         }])
-        .pipe(assert.first(function (obj) {  }))
-        .pipe(assert.second(function (obj) {  }))
-        .pipe(assert.length(2))
-        .pipe(assert.end());
+        .pipe(assert.first(function (obj) { console.log(obj); }))
+        .pipe(assert.length(1))
+        .pipe(assert.end(done));
 });
