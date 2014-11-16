@@ -14,7 +14,7 @@
     "vow": "^0.4.7"
   },
   "devDependencies": {
-    "bem-walk": "0.0.0",
+    "bem-walk": "0.0.4",
     "mocha": "^2.0.1",
     "mock-fs": "^2.3.2",
     "stream-assert": "^2.0.2",
